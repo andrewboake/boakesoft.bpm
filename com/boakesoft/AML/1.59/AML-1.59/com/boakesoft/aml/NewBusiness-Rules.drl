@@ -1,0 +1,230 @@
+package com.boakesoft.aml;
+
+import org.kie.api.runtime.process.WorkflowProcessInstance;
+import java.io.PrintWriter;
+import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
+
+rule "Quote"
+    ruleflow-group "quote"
+    when
+        $process: WorkflowProcessInstance()
+    then
+        PrintWriter logFile = new PrintWriter("newbusiness-quote.log");
+        logFile.println(new Date().toString() + " - " + "Invoking Quote rule...");
+        
+        // Get the variable value from the process instance
+        logFile.println(new Date().toString() + " - " + "Getting variable values...");
+        Quote quote = (Quote)$process.getVariable("quote");
+        logFile.println(new Date().toString() + " - " + "quote: " + quote.toString());
+        
+        logFile.println(new Date().toString() + " - " + "Got variable values");
+        
+        // Insert the variable values into rule base
+        logFile.println(new Date().toString() + " - " + "Insert variable values into rule base...");
+        if (quote != null) {
+            insert(quote);
+            logFile.println(new Date().toString() + " - " + "Variable values inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Quote");
+        }
+        
+        // Setting quote parameters
+        logFile.println(new Date().toString() + " - " + "Setting quote parameters");
+        
+        // Create one charge, called 'Fees'
+        logFile.println(new Date().toString() + " - " + "Creating Instruction...");
+        Instruction feeInstruction = new Instruction();
+        feeInstruction.setDescription("Fees");
+        feeInstruction.setAmount(10.0);
+        List<Instruction> instructionList = new ArrayList<Instruction>();
+        logFile.println(new Date().toString() + " - " + "Adding Instruction list to quote...");
+        instructionList.add(feeInstruction);
+        quote.setCharges(instructionList);
+        
+        // Set quote date to today
+        logFile.println(new Date().toString() + " - " + "Setting quote date...");
+        quote.setFromDate(new Date());
+        
+        // Set the quote's status to 'quoted'
+        logFile.println(new Date().toString() + " - " + "Setting quote status...");
+        quote.setStatus("quoted");
+        
+        // Update the quote in the rule base
+        logFile.println(new Date().toString() + " - " + "Updating quote");
+        update(quote);
+        logFile.println(new Date().toString() + " - " + "Updated: " + quote.toString());
+        
+        // Update the quote variable
+        logFile.println(new Date().toString() + " - " + "Updating quote variable...");
+        $process.setVariable("quote", quote);
+        logFile.println(new Date().toString() + " - " + "Updated: " + quote.toString());
+        
+        // Get and check the quote variable
+        logFile.println(new Date().toString() + " - " + "Checking quote variable...");
+        Quote checkQuote = (Quote)$process.getVariable("quote");
+        logFile.println(new Date().toString() + " - " + "Updated: " + checkQuote.toString());
+        
+        // Retract the process instance
+        logFile.println(new Date().toString() + " - " + "Retracting process instance...");
+        retract($process);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+
+rule "Onboard"
+    ruleflow-group "onboard"
+    when
+        $process: WorkflowProcessInstance()
+    then
+        PrintWriter logFile = new PrintWriter("newbusiness-onboard.log");
+        logFile.println(new Date().toString() + " - " + "Invoking Onboard rule...");
+        
+        // Get the variable values from the process instance
+        logFile.println(new Date().toString() + " - " + "Getting variable values...");
+        Quote quote = (Quote)$process.getVariable("quote");
+        logFile.println(new Date().toString() + " - " + "quote: " + quote.toString());
+        
+        logFile.println(new Date().toString() + " - " + "Got variable values");
+        
+        // Insert the variable values into rule base
+        logFile.println(new Date().toString() + " - " + "Insert variable values into rule base...");
+        if (quote != null) {
+            insert(quote);
+            logFile.println(new Date().toString() + " - " + "Variable values inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Quote");
+        }
+        
+        if (quote.getStatus().equals("quoted")) {
+            Product product = quote.getProduct();
+            if (product != null) {
+                Party party = quote.getParty();
+                if (party != null) {
+                    // Creating an agreement from the quote
+                    logFile.println(new Date().toString() + " - " + "Creating an Agreement from the Quote");
+                    Agreement agreement = new Agreement();
+        
+                    // Set agreement date to today
+                    logFile.println(new Date().toString() + " - " + "Setting agreement date...");
+                    agreement.setFromDate(new Date());
+        
+                    // Set the agreement number
+                    logFile.println(new Date().toString() + " - " + "Setting agreement number...");
+                    agreement.setNumber(product.getName() + "/" + "1234");
+                    
+                    // Set the agreement product
+                    logFile.println(new Date().toString() + " - " + "Setting agreement product...");
+                    agreement.setProduct(product);
+        
+                    // Set the agreement role
+                    logFile.println(new Date().toString() + " - " + "Setting agreement role...");
+                    Role role = new Role();
+                    role.setParty(party);
+                    role.setAgreement(agreement);
+                    role.setFromDate(new Date());
+                    role.setKind("contractingParty");
+                    List<Role> agreementRoleList = new ArrayList<Role>();
+                    // Add the previous roles to the list
+                    agreementRoleList.add(role);
+                    agreement.setRoles(agreementRoleList);
+                    
+                    // Set the party role
+                    logFile.println(new Date().toString() + " - " + "Setting party role...");
+                    List<Role> partyRoleList = new ArrayList<Role>();
+                    // Add the previous roles to the list
+                    partyRoleList.add(role);
+                    party.setRoles(partyRoleList);
+                    
+                    // Create one instruction, called 'Premium'
+                    logFile.println(new Date().toString() + " - " + "Creating Instruction...");
+                    Instruction premiumInstruction = new Instruction();
+                    premiumInstruction.setDescription("Premium");
+                    premiumInstruction.setAmount(100.0);
+                    List<Instruction> instructionList = new ArrayList<Instruction>();
+                    logFile.println(new Date().toString() + " - " + "Adding Instruction list to agreement...");
+                    instructionList.add(premiumInstruction);
+                    // Add the fees instruction from the quote
+                    agreement.setInstructions(instructionList);
+                    
+                    // Insert the agreement into the rule base
+                    logFile.println(new Date().toString() + " - " + "Inserting agreement");
+                    insert(agreement);
+                    logFile.println(new Date().toString() + " - " + "Inserted: " + agreement.toString());
+        
+                    // Update the agreement variable
+                    logFile.println(new Date().toString() + " - " + "Updating agreement variable...");
+                    $process.setVariable("agreement", agreement);
+                    logFile.println(new Date().toString() + " - " + "Updated: " + agreement.toString());
+        
+                    // Get and check the agreement variable
+                    logFile.println(new Date().toString() + " - " + "Checking agreement variable...");
+                    Agreement checkAgreement = (Agreement)$process.getVariable("agreement");
+                    logFile.println(new Date().toString() + " - " + "Updated: " + checkAgreement.toString());
+                } else {
+                    logFile.println(new Date().toString() + " - " + "Can't create Agreement - No party specified");
+                }
+            } else {
+                logFile.println(new Date().toString() + " - " + "Can't create Agreement - No product specified");
+            }
+        } else {
+            logFile.println(new Date().toString() + " - " + "Can't create Agreement - Quote status != quoted (" + quote.getStatus() + ")");
+        }
+        // Retract the process instance
+        logFile.println(new Date().toString() + " - " + "Retracting process instance...");
+        retract($process);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+
+rule "Notify"
+    ruleflow-group "notify"
+    when
+        $process: WorkflowProcessInstance()
+    then
+        PrintWriter logFile = new PrintWriter("newbusiness-notify.log");
+        logFile.println(new Date().toString() + " - " + "Invoking Notify rule...");
+        
+        // Get the variable values from the process instance
+        logFile.println(new Date().toString() + " - " + "Getting variable values...");
+        Boolean accepted = (Boolean)$process.getVariable("accepted");
+        Boolean approved = (Boolean)$process.getVariable("approved");
+        Quote quote = (Quote)$process.getVariable("quote");
+        Agreement agreement = (Agreement)$process.getVariable("agreement");
+        logFile.println(new Date().toString() + " - " + "Got variable values");
+        
+        // Bring up dialogs to inform the user of the acceptance and approval status
+        logFile.println(new Date().toString() + " - " + "Inform the user...");
+        if (accepted) {
+            if (approved) {
+                // Inform that agreement approved
+                String message = "Agreement " + agreement.getNumber() + 
+                    " (product = " + agreement.getProduct().getName() + ")" +
+                    " - approved";
+                logFile.println(new Date().toString() + " - " + message);
+            } else {
+                // Inform that agreement not approved
+                String message = "Agreement " + agreement.getNumber() + 
+                    " (product = " + agreement.getProduct().getName() + ")" +
+                    " - not approved";
+                logFile.println(new Date().toString() + " - " + message);
+            }
+        } else {
+            // Inform that quote not accepted
+            String message = "Quote " + 
+                " (party = " + quote.getParty().getName() + ", " +
+                " product = " + quote.getProduct().getName() + ")" +
+                    " - not accepted";
+                logFile.println(new Date().toString() + " - " + message);
+        }
+        
+        // Retract the process instance
+        logFile.println(new Date().toString() + " - " + "Retracting process instance...");
+        retract($process);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end

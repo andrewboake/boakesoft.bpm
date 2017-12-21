@@ -1,0 +1,230 @@
+package com.boakesoft.aml;
+
+import org.kie.api.runtime.process.ProcessInstance;
+import org.kie.api.runtime.process.WorkflowProcessInstance;
+import org.kie.api.runtime.KieSession;
+
+import java.io.PrintWriter;
+import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+
+// Event handling rules
+// - Can be triggered any time, so no rule flow group
+
+// Create Blackboard
+// If there is an event fired, and there is no Blackboard, create and insert one
+rule "Create Blackboard"
+    when
+        Event()
+        not Blackboard()
+    then
+        Blackboard blackboard = new Blackboard();
+        insert(blackboard);
+end
+
+// Potential client event - triggered in the process when a new client is about to be brought on board
+rule "PotentialClientEvent"
+    when
+        $pce: PotentialClientEvent($party: party)
+        $session: KieSession()
+    then
+        PrintWriter logFile = new PrintWriter("aml-potentialclientevent.log");
+        logFile.println(new Date().toString() + " - " + "Potential client event: " + 
+            "[" + 
+            "party: " + $party.getName() +
+            "]");
+        
+        // Create and start an AML process against this potential party
+        Map<String, Object> parameters = new HashMap<String, Object>();
+        parameters.put("party", $party);
+        logFile.println(new Date().toString() + " - " + "Creating process...");
+        ProcessInstance processInstance = $session.createProcessInstance("AML.AML_CheckParty", parameters);
+        logFile.println(new Date().toString() + " - " + "Starting process...");
+        $session.startProcessInstance(processInstance.getId());
+        logFile.println(new Date().toString() + " - " + "Started");
+        
+        // Retract the event
+        logFile.println(new Date().toString() + " - " + "Retracting event...");
+        retract($pce);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        // Retract the session
+        logFile.println(new Date().toString() + " - " + "Retracting session...");
+        retract($session);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+
+// Potential agreement event - triggered in the process when a new agreement is about to be onboarded
+rule "PotentialAgreementEvent"
+    when
+        $pae: PotentialAgreementEvent($party: party, $product: product, $quote: quote)
+        $session: KieSession()
+    then
+        PrintWriter logFile = new PrintWriter("aml-potentialagreementevent.log");
+        logFile.println(new Date().toString() + " - " + "Potential agreement event: " + 
+            "[" + 
+            "party: " + $party.getName() + ", " +
+            "product: " + $product.getName() +
+            "]");
+        
+        // Create and start an AML process against this potential agreement
+        Map<String, Object> parameters = new HashMap<String, Object>();
+        parameters.put("party", $party);
+        parameters.put("product", $product);
+        parameters.put("quote", $quote);
+        logFile.println(new Date().toString() + " - " + "Creating process...");
+        ProcessInstance processInstance = $session.createProcessInstance("AML.AML_CheckRequirements", parameters);
+        logFile.println(new Date().toString() + " - " + "Starting process...");
+        $session.startProcessInstance(processInstance.getId());
+        logFile.println(new Date().toString() + " - " + "Started");
+        
+        // Retract the event
+        logFile.println(new Date().toString() + " - " + "Retracting event...");
+        retract($pae);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        // Retract the session
+        logFile.println(new Date().toString() + " - " + "Retracting session...");
+        retract($session);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+
+rule "PotentialMoneyInEvent"
+    when
+        $pmie: PotentialMoneyInEvent($instruction: instruction)
+    then
+        PrintWriter logFile = new PrintWriter("aml-potentialmoneyinevent.log");
+        logFile.println(new Date().toString() + " - " + "Potential money in event: " + $instruction.getDescription() + " [" + $instruction.getAmount() + ", " + $instruction.getFromDate() + "]");
+        
+        logFile.close();
+end
+
+rule "PotentialMoneyOutEvent"
+    when
+        $pmoe: PotentialMoneyOutEvent($instruction: instruction)
+    then
+        PrintWriter logFile = new PrintWriter("aml-potentialmoneyoutevent.log");
+        logFile.println(new Date().toString() + " - " + "Potential money out event: " + $instruction.getDescription() + " [" + $instruction.getAmount() + ", " + $instruction.getFromDate() + "]");
+        
+        logFile.close();
+end
+
+// AML rules
+// - Invoked from AML processes' business rule tasks
+
+// Risk rating
+rule "Rate Risk"
+    ruleflow-group "riskrating"
+    when
+        $process: WorkflowProcessInstance()
+    then
+        PrintWriter logFile = new PrintWriter("aml-riskrating.log");
+        logFile.println(new Date().toString() + " - " + "Invoking Rate Risk rule...");
+        
+        // Get the variable values from the process instance
+        logFile.println(new Date().toString() + " - " + "Getting variable values...");
+        Party party = (Party)$process.getVariable("party");
+        logFile.println(new Date().toString() + " - " + "Got variable values");
+        
+        // Insert the variable values into rule base
+        logFile.println(new Date().toString() + " - " + "Insert variable values into rule base...");
+        if (party != null) {
+            insert(party);
+            logFile.println(new Date().toString() + " - " + "Party inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Party");
+        }
+        
+        // Retract the process instance
+        logFile.println(new Date().toString() + " - " + "Retracting process instance...");
+        retract($process);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+
+// Sanctions screening
+rule "Sanctions Screening"
+    ruleflow-group "sanctionsscreening"
+    when
+        $process: WorkflowProcessInstance()
+    then
+        PrintWriter logFile = new PrintWriter("aml-sanctionsscreening.log");
+        logFile.println(new Date().toString() + " - " + "Invoking Sanctions Screening rule...");
+        
+        // Get the variable values from the process instance
+        logFile.println(new Date().toString() + " - " + "Getting variable values...");
+        Party party = (Party)$process.getVariable("party");
+        logFile.println(new Date().toString() + " - " + "Got variable values");
+        
+        // Insert the variable values into rule base
+        logFile.println(new Date().toString() + " - " + "Insert variable values into rule base...");
+        if (party != null) {
+            insert(party);
+            logFile.println(new Date().toString() + " - " + "Party inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Party");
+        }
+        
+        // Retract the process instance
+        logFile.println(new Date().toString() + " - " + "Retracting process instance...");
+        retract($process);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+
+// Check Requirements
+rule "Check Requirements"
+    ruleflow-group "checkrequirements"
+    when
+        $process: WorkflowProcessInstance()
+    then
+        PrintWriter logFile = new PrintWriter("aml-checkrequirements.log");
+        logFile.println(new Date().toString() + " - " + "Invoking Check Requirements rule...");
+        
+        // Get the variable values from the process instance
+        logFile.println(new Date().toString() + " - " + "Getting variable values...");
+        Party party = (Party)$process.getVariable("party");
+        Product product = (Product)$process.getVariable("product");
+        Quote quote = (Quote)$process.getVariable("quote");
+        logFile.println(new Date().toString() + " - " + "Got variable values");
+        
+        // Insert the variable values into rule base
+        logFile.println(new Date().toString() + " - " + "Insert variable values into rule base...");
+        if (party != null) {
+            insert(party);
+            logFile.println(new Date().toString() + " - " + "Party inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Party");
+        }
+        
+        if (product != null) {
+            insert(product);
+            logFile.println(new Date().toString() + " - " + "Product inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Product");
+        }
+        
+        if (quote != null) {
+            insert(quote);
+            logFile.println(new Date().toString() + " - " + "Quote inserted");
+        } else {
+            logFile.println(new Date().toString() + " - " + "Error - No Quote");
+        }
+        
+        // Retract the process instance
+        logFile.println(new Date().toString() + " - " + "Retracting process instance...");
+        retract($process);
+        logFile.println(new Date().toString() + " - " + "Retracted");
+        
+        logFile.close();
+end
+

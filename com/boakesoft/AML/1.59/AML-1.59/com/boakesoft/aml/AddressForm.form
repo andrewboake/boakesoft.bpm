@@ -1,0 +1,30 @@
+
+<form id="2035878175">
+<property name="name" value="AddressForm.form"/>
+<property name="displayMode" value="default"/>
+<property name="status" value="0"/>
+<field position="0" name="Address_kind" type="InputText" id="79042438">
+<property name="fieldRequired" value="false"/>
+<property name="groupWithPrevious" value="false"/>
+<property name="label" value="quot;SSClassquot;,quot;quot;quot;SSStylequot;,quot;quot;quot;caquot;,quot;quot;quot;dequot;,quot;quot;quot;enquot;,quot;kind (Address)quot;quot;esquot;,quot;quot;quot;frquot;,quot;quot;quot;jaquot;,quot;quot;quot;ptquot;,quot;quot;quot;zhquot;,quot;quot;"/>
+<property name="errorMessage" value="quot;caquot;,quot;quot;quot;dequot;,quot;quot;quot;enquot;,quot;quot;quot;esquot;,quot;quot;quot;frquot;,quot;quot;quot;jaquot;,quot;quot;quot;ptquot;,quot;quot;quot;zhquot;,quot;quot;"/>
+<property name="title" value="quot;caquot;,quot;quot;quot;dequot;,quot;quot;quot;enquot;,quot;quot;quot;esquot;,quot;quot;quot;frquot;,quot;quot;quot;jaquot;,quot;quot;quot;ptquot;,quot;quot;quot;zhquot;,quot;quot;"/>
+<property name="readonly" value="false"/>
+<property name="rangeFormula" value="{physical,physical;email,email;postal,postal}"/>
+<property name="isHTML" value="false"/>
+<property name="hideContent" value="false"/>
+<property name="inputBinding" value="Address_in/kind"/>
+<property name="outputBinding" value="Address_out/kind"/>
+<property name="fieldClass" value="java.lang.String"/>
+</field>
+<field position="1" name="Address_contents" type="InputText" id="57801762">
+<property name="fieldRequired" value="false"/>
+<property name="groupWithPrevious" value="true"/>
+<property name="label" value="quot;enquot;,quot;contents (Address)quot;"/>
+<property name="readonly" value="false"/>
+<property name="inputBinding" value="Address_in/contents"/>
+<property name="outputBinding" value="Address_out/contents"/>
+<property name="fieldClass" value="java.lang.String"/>
+</field>
+<dataHolder inputId="Address_in" name="#E9E371" type="dataModelerEntry" outId="Address_out" value="com.boakesoft.aml.Address" id="Address"/>
+</form>
